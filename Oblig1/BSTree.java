@@ -5,13 +5,13 @@ public class BSTree implements BSTOper {
         Node left, right;
         int value;
 
-        //Constructor without value input
+        // Constructor without value input
         Node() {
             this.left = null;
             this.right = null;
         }
 
-        //constructor with value input
+        // constructor with value input
         Node(int v) {
             this.left = null;
             this.right = null;
@@ -19,117 +19,151 @@ public class BSTree implements BSTOper {
         }
     }
 
-    public void add(int value){
-
-        //check to see if tree is empty
-        if(root == null){
+    public void add(int value) {
+        if (root == null) {
             root = new Node(value);
-        }else{
-            Node curNode = root;
-            Node parent = null;
+            System.out.println("No tree found, new tree created");
+        } else {
+            add(value, root);
+        }
+    }
 
-            while(true){
-                if(value < curNode.value){
-                    System.out.println("Traversing left");
-                    parent = curNode;
-                    curNode = curNode.left;
-                    if(curNode == null){
-                        curNode = new Node(value);
-                        System.out.println("Node added left");
-                        return;
-                    }
-                }
-                if(value > curNode.value){
-                    parent = curNode;
-                    curNode = curNode.right;
-                    System.out.println("Traversing right");
-                    if(curNode == null){
-                        curNode = new Node(value);
-                        System.out.println("Node added right");
-                        return;
-                    }
-                }
+    public void add(int value, Node currNode) {
+        if (value == currNode.value) {
+            System.out.println("Duplicate node found, terminated node insertion");
+            return;
+        } else if (value < currNode.value) {
+            if (currNode.left == null) {
+                currNode.left = new Node(value);
+                System.out.println("Node added left");
+                return;
+            } else {
+                add(value, currNode.left);
+                System.out.println("Moved to the left");
+            }
+        } else if (value > currNode.value) {
+            if (currNode.right == null) {
+                currNode.right = new Node(value);
+                System.out.println("Node added right");
+                return;
+            } else {
+                System.out.println("Moved to the right");
+                add(value, currNode.right);
             }
         }
     }
 
-    public boolean remove(int value){
+    public boolean remove(int value) {
 
-        if(root == null){
+        if (root == null) {
             System.out.println("Tree is empty, nothing to remove");
             return false;
         }
-        Node childRight = null;
-        Node childLeft = null;
-        Node curNode = root;
-        Node parent = null;
+        if(existsInTree(value)){
 
-        while(true){
-            if(value == curNode.value){
-                parent.left = childLeft;
-                parent.right = childRight;
-                return true;
-            }
         }
     }
 
-    public int size(){
+    public int size() {
         return size(root);
     }
 
-    public int size(Node node){
-        if(node == null){
+    public int size(Node node) {
+        if (node == null) {
             return 0;
-        }else{
+        } else {
             return (size(node.left) + 1 + size(node.right));
         }
     }
 
-    public boolean existsInTree(int value){
-        return existsInTree(value);
+    public boolean existsInTree(int value) {
+        return existsInTree(value, root);
     }
-    public boolean existsInTree(int value, Node currNode){
-        if (currNode == null){
+
+    public boolean existsInTree(int value, Node currNode) {
+        if (currNode == null) {
+            System.out.println("Value does not exist in tree, tree doesnt have any nodes");
             return false;
         }
         if(value == currNode.value){
-            System.out.println("Value found in tree");
+            System.out.println("Value " + value + " does exist in tree");
             return true;
+        }
+        if(value < currNode.value){
+            if(currNode.left == null){
+                System.out.println(value + "Does not exist in tree");
+                return false;
+            }else{
+                existsInTree(value, currNode.left);
+            }
         }else{
-            return(existsInTree(value, currNode.left) || existsInTree(value, currNode.right));
+            if(currNode.right == null){
+                System.out.println(value + "Does not exist in tree");
+                return false;
+            }else{
+                existsInTree(value, currNode.right);
+            }
+        }
+        return false;
+    }
+
+    public int findNearestSmallerThan(int value) {
+        int nearest = 0;
+        if (root == null) {
+            return nearest;
+        }
+        return findNearestSmallerThan(value, root, nearest);
+    }
+
+    public int findNearestSmallerThan(int value, Node currNode, int nearest) {
+        if (currNode == null) {
+            return nearest;
+        }
+        if (value > currNode.value && currNode.value > nearest) {
+            System.out.println("Nearest updated to " + currNode.value);
+            return (findNearestSmallerThan(value, currNode, currNode.value));
+        } else {
+            return (findNearestSmallerThan(value, currNode, nearest));
         }
     }
 
-    public int findNearestSmallerThan(int value){
-        return 0;
-    }
-
-    public void addAll(int[] integers){
-        if(integers == null || integers.length == 0){
+    public void addAll(int[] integers) {
+        if (integers == null || integers.length == 0) {
             System.out.println("Array is empty");
             return;
         }
-        for(int i = 0; i < integers.length; i++){
+        for (int i = 0; i < integers.length; i++) {
             add(integers[i]);
         }
     }
 
-    public int[] sortedArray(){
-        return sortedArray(root);
-    } // inorder
+    public int[] sortedArray() {
+        int[] sortedNodes = new int[size()];
+        int index = 0;
+        return sortedArray(root, sortedNodes, index);
+    }
 
-    public int[] sortedArray(Node currNode){
-        if(currNode == null){
+    public int[] sortedArray(Node currNode, int[] sortedNodes, int index) {
+        if (currNode == null) {
             return null;
         }
-        return (new int[]{sortedArray(currNode.left), sortedArray(currNode.right)});
+        sortedArray(currNode.left, sortedNodes, index);
+        sortedNodes[index++] =  currNode.value;
+        sortedArray(currNode.right, sortedNodes, index);
+        sortedNodes[index++] = currNode.value;
+        return sortedNodes;
     }
 
-    public int[] findInRange(int low, int high){
-        int[] jos = new int[4];
-        return jos;
+    public int[] findInRange(int low, int high) {
+        int[] tree = sortedArray();
+        int length = high - low;
+        int[] inRange = new int[length];
+        for(int i = 0; i < tree.length; i++){
+            if(high > tree[i] && tree[i] > low){
+                inRange[tree[i]];
+            }
+        }      
     }
-
 
     // konstruktører til BSTree
     private Node findParent(Node n) {
