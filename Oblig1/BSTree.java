@@ -19,35 +19,57 @@ public class BSTree implements BSTOper {
         }
     }
 
+    public void printTree(){
+        printTree(root);
+    }
+    public void printTree(Node node){
+        System.out.println(node.value);
+        if(node.left != null){
+            System.out.println(node.value + " er faren til " + node.left.value);
+            System.out.println();
+            printTree(node.left);
+        }else{
+            System.out.println("lovnode");
+        }
+        if(node.right != null){
+            System.out.println(node.value + " er faren til " + node.right.value);
+            System.out.println();
+            printTree(node.right);
+        }else{
+            System.out.println("lovnode");
+            System.out.println();
+        }
+    }
+
     public void add(int value) {
         if (root == null) {
             root = new Node(value);
-            System.out.println("No tree found, new tree created");
+            System.out.println("No tree found, new tree created with value " + value);
         } else {
             add(value, root);
         }
     }
 
-    public void add(int value, Node currNode) {
-        if (value == currNode.value) {
+    public void add(int value, Node currNode){
+        if (value == currNode.value){
             System.out.println("Duplicate node found, terminated node insertion");
             return;
-        } else if (value < currNode.value) {
-            if (currNode.left == null) {
+        }else if(value < currNode.value){
+            if(currNode.left == null){
                 currNode.left = new Node(value);
-                System.out.println("Node added left");
+                System.out.println("Node added left with value " + value + " with parent node " + currNode.value);
                 return;
-            } else {
+            }else{
                 add(value, currNode.left);
-                System.out.println("Moved to the left");
+                System.out.println("Moved to the left from " + currNode.value + " to " + currNode.left.value);
             }
-        } else if (value > currNode.value) {
-            if (currNode.right == null) {
+        }else if(value > currNode.value) {
+            if(currNode.right == null){
                 currNode.right = new Node(value);
-                System.out.println("Node added right");
+                System.out.println("Node added left with value " + value + " with parent node " + currNode.value);
                 return;
-            } else {
-                System.out.println("Moved to the right");
+            }else{
+                System.out.println("Moved to the left from " + currNode.value + " to " + currNode.right.value);
                 add(value, currNode.right);
             }
         }
@@ -60,8 +82,8 @@ public class BSTree implements BSTOper {
             return false;
         }
         if(existsInTree(value)){
-
         }
+        return false;
     }
 
     public int size() {
@@ -150,7 +172,7 @@ public class BSTree implements BSTOper {
         sortedArray(currNode.left, sortedNodes, index);
         sortedNodes[index++] =  currNode.value;
         sortedArray(currNode.right, sortedNodes, index);
-        sortedNodes[index++] = currNode.value;
+        
         return sortedNodes;
     }
 
@@ -160,9 +182,10 @@ public class BSTree implements BSTOper {
         int[] inRange = new int[length];
         for(int i = 0; i < tree.length; i++){
             if(high > tree[i] && tree[i] > low){
-                inRange[tree[i]];
+                inRange[i] = tree[i];
             }
         }      
+        return inRange;
     }
 
     // konstruktører til BSTree
