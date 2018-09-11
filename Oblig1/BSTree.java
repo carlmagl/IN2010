@@ -165,14 +165,20 @@ public class BSTree implements BSTOper {
         return sortedArray(root, sortedNodes, index);
     }
 
-    public int[] sortedArray(Node currNode, int[] sortedNodes) {
+    public int[] sortedArray(Node currNode, int[] sortedNodes, int index) {
         if (currNode.left != null) {
-            sortedArray(currNode.left, sortedNodes);
+            sortedArray(currNode.left, sortedNodes, index);
         }
+        
+        sortedNodes[index++] = currNode.value;
 
         if (currNode.right != null) {
-            sortedArray(currNode.left, sortedNodes);
+            sortedArray(currNode.right, sortedNodes, index);
         }
+        for (int i : sortedNodes) {
+            System.out.println(i);
+        }
+        System.out.println();
         return sortedNodes;
     }
 
