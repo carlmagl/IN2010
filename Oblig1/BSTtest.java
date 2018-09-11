@@ -15,7 +15,12 @@ public class BSTtest {
         for (int i : list) {
             System.out.println(i);
         }
+        
+        int[] listInRange = tree.findInRange(2, 10);
 
+        for (int i : listInRange) {
+            System.out.println(i);
+        }
         System.out.println(tree.existsInTree(7));
     }
 }
