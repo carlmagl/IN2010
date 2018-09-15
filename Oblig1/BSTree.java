@@ -75,41 +75,51 @@ public class BSTree implements BSTOper {
             }
         }
     }
-    public boolean remove(int value){
-        if(existsInTree(value)){
-            return remove(value, root);
-        }else{
+
+    public boolean remove(int value) {
+        if (existsInTree(value)) {
+            return remove(value, find(value));
+        } else {
             return false;
         }
     }
 
     public boolean remove(int value, Node curNode) {
-        curNode = find(value);
-        if(curNode.left == null && curNode.right == null){
-            parent = findParent(curNode);
-            if(parent.left.value != null && parent.left.value == curNode.left.value){
+        if (curNode.left == null && curNode.right == null) {
+            Node parent = findParent(curNode);
+            if (parent.left != null && parent.left.value == curNode.left.value) {
                 parent.left = null;
                 return true;
-            }else{
+            } else {
                 parent.right = null;
                 return true;
             }
-        }
+        }else if(curNode.right == null){  
+            Node parent = findParent(curNode);
+            if (parent.left != null && parent.left.value == curNode.left.value) {
+                parent.left = curNode.left;
+                return true;
+            } else {
+                parent.right = curNode.right;
+                return true;
+            }
 
-        if(curNode.left != null && curNode.right != null){
-            parent = findParent(curNode);
-            if(parent.left.value == curNode.left.value){
-                
+        }else if (curNode.left != null && curNode.right != null) {
+            Node parent = findParent(curNode);
+            if (parent.left != null && parent.left.value == curNode.left.value) {
+                int nearestValue = findNearestSmallerThan(value);
+                remove(nearestValue);
+                parent.left.value = nearestValue;
+                return true;
             }else{
-                parent.right = null;
+                int nearestValue = findNearestSmallerThan(value);
+                remove(nearestValue);
+                parent.right.value = nearestValue;
                 return true;
             }
         }
-
-
-
-
         return false;
+        
     }
 
     public int size() {
@@ -146,22 +156,20 @@ public class BSTree implements BSTOper {
     }
 
     public int findNearestSmallerThan(int value) {
-        int nearest = 0;
-        if (root == null) {
-            return nearest;
+        if (find(value).left == null && find(value).right == null) {
+            return value;
         }
-        return findNearestSmallerThan(value, root, nearest);
+        if (find(value).left == null) {
+            return findNearestSmallerThan(value, find(value).right);
+        }
+        return findNearestSmallerThan(value, find(value));
     }
 
-    public int findNearestSmallerThan(int value, Node curNode, int nearest) {
-        if (curNode == null) {
-            return nearest;
-        }
-        if (value > curNode.value && curNode.value > nearest) {
-            System.out.println("Nearest updated to " + curNode.value);
-            return (findNearestSmallerThan(value, curNode, curNode.value));
+    public int findNearestSmallerThan(int value, Node curNode) {
+        if (curNode.left == null) {
+            return curNode.value;
         } else {
-            return (findNearestSmallerThan(value, curNode, nearest));
+            return findNearestSmallerThan(value, curNode.left);
         }
     }
 
@@ -236,10 +244,10 @@ public class BSTree implements BSTOper {
             return curNode;
         }
         if (value < curNode.value && curNode.left != null) {
-            find(value, curNode.left);
+            return find(value, curNode.left);
         }
         if (value > curNode.value && curNode.right != null) {
-            find(value, curNode.right);
+            return find(value, curNode.right);
         }
         return null;
     }
