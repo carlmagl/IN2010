@@ -21,6 +21,7 @@ public class BSTtest {
         for (int i : listInRange) {
             System.out.println(i);
         }
+<<<<<<< HEAD
         System.out.println(tree.existsInTree(7));
         System.out.println(tree.findNearestSmallerThan(7));
         System.out.println(tree.findNearestSmallerThan(10));
@@ -28,6 +29,8 @@ public class BSTtest {
         System.out.println(tree.findNearestSmallerThan(7));
 
         System.out.println(tree.remove(7));
+=======
+>>>>>>> eeac9722cf823d8da69d7c1d69f2901d70ae1b98
         System.out.println(tree.existsInTree(7));
     }
 }
