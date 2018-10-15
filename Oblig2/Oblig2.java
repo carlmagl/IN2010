@@ -8,15 +8,10 @@ class Oblig2 {
             return;
         } else {
             Planner planner = new Planner(args[0]);
-                //check for cycles
-            if (planer.findCycle()) {
-                System.out.println("Found a cycle, the project is not realizable");
-            } else {
+            // starttasks
+            // setLatestStartAndSlack
+            // printAllAfterRun
 
-                // starttasks
-                // setLatestStartAndSlack
-                // printAllAfterRun
-            }
         }
     }
 }

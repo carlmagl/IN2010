@@ -3,162 +3,232 @@ import java.util.*;
 
 class Planner {
 
-    private ArrayList<Task> tasks, visited;
+    private ArrayList<Task> tasks, visited, firstStart;
+    private ArrayList<Task> zeroDep = new ArrayList<>();
+    private ArrayList<Task> doing = new ArrayList<>();
+    private ArrayList<Task> done = new ArrayList<>();
+    private int count = 0;
+    private int timeCounter;
+    private static boolean foundCycle = false;
 
-    planner(String filNavn){
-        tasks = new Arraylist<Task>();
+    Planner(String filnavn) throws Exception {
+        tasks = new ArrayList<Task>();
         visited = new ArrayList<Task>();
+        firstStart = new ArrayList<Task>();
+        timeCounter = 0;
         readFile(filnavn);
-        setDependencies();
-        checkForCycles();
+        //makeDependencies();
+        findCycle();
+        beginTasks();
+        setLatestStartAndSlack();
+        printAllAfterRun();
     }
 
     private void readFile(String filnavn) throws Exception {
         Scanner scanner = new Scanner(new File(filnavn));
+        scanner.nextLine();
+        scanner.nextLine();
         while (scanner.hasNextLine()) {
-            String[] info = scanner.nextLine().split(" ");
-            Task newTask = new Task(info[0], info[1], info[2], info[3]);
-            List<String> temp;
-            for (int i = 4; i < info.length; i++) {
-                temp.add(info[i]);
+            String[] info = scanner.nextLine().split("\\s+");
+            if (info.length > 1) {
+                Task newTask = getTask(Integer.parseInt(info[0]));
+                newTask.setTask(info[1], Integer.parseInt(info[2]), Integer.parseInt(info[3]));
+                ArrayList<Task> temp = new ArrayList<Task>();
+                for (int i = 4; i < info.length; i++) {
+                    if(Integer.parseInt(info[i]) != 0){
+                        newTask.addDependentTask(getTask(Integer.parseInt(info[i])));
+                    }
+                }
+                newTask.setCntPredecessors(temp.size());
+                tasks.add(newTask);
+                newTask.printTask();
             }
-            newTask.setOe(temp);
-            tasks.add(newTask);
+        }
+        firstStart = getAllTasksWithZero(0);
+    }
+
+    private void beginTasks() {
+        boolean someThingChanged = false;
+        ArrayList<Task> started = new ArrayList<>();
+        ArrayList<Task> doneTasks = new ArrayList<>();
+        int currStaff = 0;
+
+        while (existsUndoneTask()) {
+            for (int i = doing.size() - 1; i >= 0; i--) {
+                if ((doing.get(i).getEarliestStart() + doing.get(i).getTime()) == timeCounter) {
+                    doneTasks.add(doing.get(i));
+                    done.add(doing.get(i));
+                    currStaff -= doing.get(i).getStaff();
+                    doing.get(i).removePredOnOutEdges(); // -- on all cntPred for the Tasks in outedge
+                    doing.remove(i);
+                    someThingChanged = true;
+                }
+            }
+
+            zeroDep = getAllTasksWithZero(timeCounter);
+            for (Task start : zeroDep) {
+                if (start == null) {
+                    break;
+                }
+                doing.add(start);
+                started.add(start);
+                currStaff += start.getStaff();
+                removeTask(start.getId());
+                someThingChanged = true;
+            }
+            zeroDep.clear();
+            if (someThingChanged) {
+                System.out.println("---------------------------------");
+                System.out.println("Time:          " + timeCounter);
+                if (!doneTasks.isEmpty()) {
+                    for (Task done : doneTasks) {
+                        System.out.println("Finished:      " + done.getId());
+                    }
+                }
+                if (!started.isEmpty()) {
+                    for (Task begun : started) {
+                        System.out.println("Started:       " + begun.getId());
+                    }
+                }
+                System.out.println("Manpower:      " + currStaff);
+                started.clear();
+                doneTasks.clear();
+                someThingChanged = false;
+                System.out.println();
+            }
+            timeCounter++;
+        }
+        timeCounter--;
+        System.out.println("Done!");
+    }
+
+    private ArrayList<Task> getAllTasksWithZero(int starttime) {
+        ArrayList<Task> tasksWithZero = new ArrayList<>();
+        for (Task task : tasks) {
+            if (task != null && task.getPredecessors() == 0) {
+                tasksWithZero.add(task);
+                task.setEarliestStart(starttime);
+            }
+        }
+        return tasksWithZero;
+    }
+
+    private void setLatestStartAndSlack() { 
+        int lowestNumber = -1;
+        int temp;
+        for (Task task : firstStart) {
+            temp = task.getLatest(timeCounter);
+            if (lowestNumber == -1) {
+                lowestNumber = temp;
+            }
+            if (temp < lowestNumber) {
+                lowestNumber = temp;
+            }
+        }
+        System.out.println("Critical tasks:");
+        for (Task curTask : done) {
+            if ((curTask.getLatestStart() - curTask.getEarliestStart()) == 0) {
+                System.out.println(curTask.getId());
+            }
         }
     }
 
-    private void makeDependencies(ArrayList<Task> taskList) {
-		// find first Task and set it
-
-		//add into this graph holding map, could have used a bag or some heap structure.
-		// this is set in the graph id start at 1 index at 0.
-
-		for (Task t: taskList){
-			if (t.getPredecessors()==null) {
-				head=t;
-			}
-		}
-
-		makeDependencies(head,taskList); //go recursive
-	}
-
-	int i = 0; // yah, global param woot woot.
-	/**
-	 * recursive method to find all edges. and calling cycle check
-	 * @param current
-	 * @param notEvalTaskList
-	 */
-	private void makeDependencies(Task current,ArrayList<Task> notEvalTaskList){
-		//some mandatory tacky code
-		if (current.getPredecessors()==null){
-			viewGraph.put(head.getId(), head);
-			notEvalTaskList.remove(head);
-
-		}
-
-		for (Task t: notEvalTaskList){
-			if (t.getPredecessors().contains(current.getId())){
-
-				current.outEdge.add(t);
-				//currId=t.getId();
-				viewGraph.put(t.getId(), t);
-
-				//System.out.println(t.getName() + " -> " + current.getName() + " t get preds "  + t.getPredecessors());
-			}
-		}
-		notEvalTaskList.remove(current);
-
-		//for (Task m: current.outEdge) System.out.println(m.getName()); //debug
-		if (notEvalTaskList.isEmpty()){
-			System.out.println("Going to find cycles");
-
-			try {
-				if (!cycleChecker(head)){
-					System.out.println("No cycle detected\n Starting evaluation of nodes in Graph ");
-					evaluateNodes();
-				}
-			} catch (CyclicGraphException e) {
-				System.err.println(e.getMessage());
-				System.exit(1); //error
-			}
-		} 
-		for(Task task:current.outEdge){
-			makeDependencies(task, notEvalTaskList);
-		}
-
-
+    private void printAllAfterRun() {
+        for (Task task : done) {
+            System.out.println("-------------------------------");
+            System.out.println("ID: " + task.getId());
+            System.out.println("Name: " + task.getName());
+            System.out.println("Time: " + task.getTime());
+            System.out.println("Manpower: " + task.getStaff());
+            System.out.println("OutEdges: ");
+            for (Task parents : task.getOutEdges()) {
+                System.out.println("ID: " + parents.getId());
+            }
+            System.out.println("Earliest start:  " + task.getEarliestStart());
+            System.out.println("Latest   start:  " + task.getLatestStart());
+            System.out.println("Slack :          " + (task.getLatestStart() - task.getEarliestStart()));
+            System.out.println();
+        }
     }
-    
-    public void evaluateNodes(){
-		evaluateNodes(head,0); //lets go recursive!
-	}
-	/**
-	 * Recursively finding the largest time throughout the graph.
-	 * By setting/reading the latest start of each node this will detect how long time each dependency will use. 
-	 * 
-	 * @param current
-	 * @param time
-	 */
-	public void evaluateNodes(Task current, int time){
-		setTimes(head);
-		System.out.println("This Project contains: " + FileReader.numberofTasks + " tasks\nThese are: ");
-		for (Task t: viewGraph.values()){
-			System.out.println(t.getId()+ " : " +t.getName());
-		}
-		System.out.println("Dependencies: ");
-		for (Task t: viewGraph.values()){
-			for(Task deps: t.outEdge){
-				System.out.println(deps.getName() + " is dependent on " + t.getName());
-			}
-		}
-	}
-	/**
-	 * recursively setting latest/earliest starting time of each Task to be evaluated. 
-	 * It is the lateste time tha t will define when the next dependent task is going to be evaluated.
-	 * task1.lateststarttime+task1.time=next.starttime ... and so on.
-	 * @param current
-	 */
-	public void setTimes(Task current){
 
-	}
-	/**
-	 * Gets the slack of the 
-	 * @param current 
-	 * 				recursive, recursive
-	 * @param prev
-	 * 				previous task.
-	 * @return int
-	 * 			the slack is s earliest start - sum of latest start
-	 */
-	public int slack(Task current, Task prev){
-		return 0;
-		
-	}
-
-
-    private boolean checkForCycles(){
-        for (Task task : tasks){
-            if(task.getPredecessors() == 0){
-                checkForCycles(task);
+    private void printCycle(ArrayList<Task> task) {
+        int lastId = task.get(task.size() - 1).getId();
+        boolean from = false;
+        System.out.println("There is a cycle, and here it is:");
+        for (Task i : task) {
+            if (from) {
+                System.out.println(i.getId());
+            } else if (i.getId() == lastId) {
+                System.out.println(i.getId());
+                from = true;
             }
         }
-        return false;
     }
 
-    private boolean checkForCycles(Task curTask) {
-        if (visited.contains(curTask)) {
-            String cycle;
-            for (Task task : tasks) {
-                System.out.println(task.getName);
-            }
+    private boolean cycle(ArrayList<Task> seen, Task k) {
+        if (seen.contains(k)) {
             return true;
         }
-        visited.add(curTask);
-        for (Task task : tasks) {
-            System.out.println(task.getName());
-            checkForCycles(task);
-            System.out.println("The given graph shows no signs of a cycle");
+        ArrayList<Task> send = new ArrayList<>();
+        send.addAll(seen);
+        send.add(k);
+        for (Task x : k.getOutEdges()) {
+            if (cycle(send, x)) {
+                if (!foundCycle) {
+                    foundCycle = true;
+                    send.add(x);
+                    printCycle(send);
+                }
+                return true;
+            }
         }
         return false;
+    }
+
+    private boolean findCycle() {
+        ArrayList<Task> kk = new ArrayList<>();
+        for (Task k : firstStart) {
+            if (cycle(kk, k)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /*
+     * private Task getTask(int id) { if (tasks[id - 1] == null) { Task temp = new
+     * Task(id); tasks[id - 1] = temp; return temp; } return tasks[id - 1]; }
+     */
+
+    private boolean existsUndoneTask() {
+        for (Task t : tasks) {
+            if (t != null) {
+                return true;
+            }
+        }
+        for (Task k : doing) {
+            if (k != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void removeTask(int taskId) {
+        for (int i = 0; i < tasks.size(); i++) {
+            if (tasks.get(i) != null) {
+                if (tasks.get(i).getId() == taskId) {
+                    tasks.remove(i);
+                }
+            }
+        }
+    }
+    private Task getTask(int id){
+        if(!tasks.contains(new Task(id))){
+            Task temp = new Task(id);
+            tasks.add(id, temp);
+            return temp;
+        }
+        return tasks.get(id);
     }
 }
