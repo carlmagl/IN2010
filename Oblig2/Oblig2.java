@@ -1,17 +1,19 @@
-import java.util.*;
-
-class Oblig2 {
-
-    public static void main(String[] args) throws Exception {
-        if (args[0] == null) {
-            System.out.println("No file found, please add filename after program");
+public class Oblig2 {
+    public static void main(String[] args) throws Exception{
+        if(args.length != 1){
+            System.out.println("Wrong number of arguments!!");
             return;
-        } else {
-            Planner planner = new Planner(args[0]);
-            // starttasks
-            // setLatestStartAndSlack
-            // printAllAfterRun
-
+        }
+        Planner planner = new Planner();
+        planner.readfile(args[0]);
+        if(planner.findCycle()){
+            System.out.println("There is a cycle, therefore it is not realizable");
+            System.out.println("Exiting program.");
+        }else{
+            System.out.println("There is not a cycle");
+            planner.beginTasks();
+            planner.setLatestStartAndSlack();
+            planner.printAllAfterRun();
         }
     }
 }

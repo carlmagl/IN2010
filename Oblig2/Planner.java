@@ -1,64 +1,30 @@
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 class Planner {
-
-    private ArrayList<Task> tasks, visited, firstStart;
+    private static boolean foundCycle = false;
+    private int timeCounter = 0;
+    private Task[] tasks;
     private ArrayList<Task> zeroDep = new ArrayList<>();
     private ArrayList<Task> doing = new ArrayList<>();
     private ArrayList<Task> done = new ArrayList<>();
+    private ArrayList<Task> firstStart = new ArrayList<>(); //This is for the latest start calculation later
     private int count = 0;
-    private int timeCounter;
-    private static boolean foundCycle = false;
 
-    Planner(String filnavn) throws Exception {
-        tasks = new ArrayList<Task>();
-        visited = new ArrayList<Task>();
-        firstStart = new ArrayList<Task>();
-        timeCounter = 0;
-        readFile(filnavn);
-        //makeDependencies();
-        findCycle();
-        beginTasks();
-        setLatestStartAndSlack();
-        printAllAfterRun();
-    }
-
-    private void readFile(String filnavn) throws Exception {
-        Scanner scanner = new Scanner(new File(filnavn));
-        scanner.nextLine();
-        scanner.nextLine();
-        while (scanner.hasNextLine()) {
-            String[] info = scanner.nextLine().split("\\s+");
-            if (info.length > 1) {
-                Task newTask = getTask(Integer.parseInt(info[0]));
-                newTask.setTask(info[1], Integer.parseInt(info[2]), Integer.parseInt(info[3]));
-                ArrayList<Task> temp = new ArrayList<Task>();
-                for (int i = 4; i < info.length; i++) {
-                    if(Integer.parseInt(info[i]) != 0){
-                        newTask.addDependentTask(getTask(Integer.parseInt(info[i])));
-                    }
-                }
-                newTask.setCntPredecessors(temp.size());
-                tasks.add(newTask);
-                newTask.printTask();
-            }
-        }
-        firstStart = getAllTasksWithZero(0);
-    }
-
-    private void beginTasks() {
+    void beginTasks(){
         boolean someThingChanged = false;
         ArrayList<Task> started = new ArrayList<>();
         ArrayList<Task> doneTasks = new ArrayList<>();
         int currStaff = 0;
 
-        while (existsUndoneTask()) {
-            for (int i = doing.size() - 1; i >= 0; i--) {
-                if ((doing.get(i).getEarliestStart() + doing.get(i).getTime()) == timeCounter) {
+        while(existsUndoneTask()){
+            for(int i = doing.size()-1; i >= 0 ;i--){
+                if((doing.get(i).earliestStart+doing.get(i).time) == timeCounter){
                     doneTasks.add(doing.get(i));
                     done.add(doing.get(i));
-                    currStaff -= doing.get(i).getStaff();
+                    currStaff-= doing.get(i).staff;
                     doing.get(i).removePredOnOutEdges(); // -- on all cntPred for the Tasks in outedge
                     doing.remove(i);
                     someThingChanged = true;
@@ -66,28 +32,28 @@ class Planner {
             }
 
             zeroDep = getAllTasksWithZero(timeCounter);
-            for (Task start : zeroDep) {
-                if (start == null) {
+            for(Task start : zeroDep){
+                if(start == null){
                     break;
                 }
                 doing.add(start);
                 started.add(start);
-                currStaff += start.getStaff();
-                removeTask(start.getId());
+                currStaff += start.staff;
+                removeTask(start.id);
                 someThingChanged = true;
             }
             zeroDep.clear();
-            if (someThingChanged) {
+            if(someThingChanged){
                 System.out.println("---------------------------------");
                 System.out.println("Time:          " + timeCounter);
-                if (!doneTasks.isEmpty()) {
-                    for (Task done : doneTasks) {
-                        System.out.println("Finished:      " + done.getId());
+                if(!doneTasks.isEmpty()){
+                    for(Task o : doneTasks){
+                        System.out.println("Finished:      " + o.id);
                     }
                 }
-                if (!started.isEmpty()) {
-                    for (Task begun : started) {
-                        System.out.println("Started:       " + begun.getId());
+                if(!started.isEmpty()){
+                    for(Task i : started){
+                        System.out.println("Started:       " + i.id);
                     }
                 }
                 System.out.println("Manpower:      " + currStaff);
@@ -102,79 +68,105 @@ class Planner {
         System.out.println("Done!");
     }
 
-    private ArrayList<Task> getAllTasksWithZero(int starttime) {
-        ArrayList<Task> tasksWithZero = new ArrayList<>();
-        for (Task task : tasks) {
-            if (task != null && task.getPredecessors() == 0) {
-                tasksWithZero.add(task);
-                task.setEarliestStart(starttime);
+    private ArrayList<Task> getAllTasksWithZero(int starttime){
+        ArrayList<Task> ret = new ArrayList<>();
+        for(Task x : tasks){
+            if(x != null && x.cntPredecessors == 0){
+                ret.add(x);
+                x.earliestStart = starttime;
             }
         }
-        return tasksWithZero;
+        return ret;
     }
 
-    private void setLatestStartAndSlack() { 
-        int lowestNumber = -1;
-        int temp;
-        for (Task task : firstStart) {
-            temp = task.getLatest(timeCounter);
-            if (lowestNumber == -1) {
-                lowestNumber = temp;
+    void readfile(String filename)throws Exception{
+        Scanner sc;
+        sc = new Scanner(new File(filename));
+        int numTasks = Integer.parseInt(sc.next());
+        tasks = new Task[numTasks];
+
+        while(sc.hasNext()){
+            int id = Integer.parseInt(sc.next());
+            String name = sc.next();
+            int time = Integer.parseInt(sc.next());
+            int staff = Integer.parseInt(sc.next());
+
+            Task ny = getTask(id);
+            ny.initialize(time, staff, name);
+            int depId = Integer.parseInt(sc.next());
+            while(depId != 0){
+                ny.cntPredecessors++;
+                Task t = getTask(depId);
+                t.outEdges.add(ny);
+                depId = Integer.parseInt(sc.next());
             }
-            if (temp < lowestNumber) {
-                lowestNumber = temp;
+            tasks[count++] = ny;
+        }
+        firstStart = getAllTasksWithZero(0);
+    }
+
+    void setLatestStartAndSlack(){ //hvis slack == 0 er den critical
+        int lowestNumber = -1;
+        int tmp;
+        for(Task i : firstStart){
+            tmp = i.getLatest(timeCounter);
+            if(lowestNumber == -1){
+                lowestNumber = tmp;
+            }
+            if(tmp < lowestNumber){
+                lowestNumber = tmp;
             }
         }
         System.out.println("Critical tasks:");
-        for (Task curTask : done) {
-            if ((curTask.getLatestStart() - curTask.getEarliestStart()) == 0) {
-                System.out.println(curTask.getId());
+        for(Task x : done) {
+            if ((x.latestStart - x.earliestStart) == 0) {
+                System.out.println(x.id);
             }
         }
     }
 
-    private void printAllAfterRun() {
-        for (Task task : done) {
+    void printAllAfterRun(){
+        for(Task x : done){
             System.out.println("-------------------------------");
-            System.out.println("ID: " + task.getId());
-            System.out.println("Name: " + task.getName());
-            System.out.println("Time: " + task.getTime());
-            System.out.println("Manpower: " + task.getStaff());
+            System.out.println("ID: " + x.id);
+            System.out.println("Name: " + x.name);
+            System.out.println("Time: " + x.time);
+            System.out.println("Manpower: " + x.staff);
             System.out.println("OutEdges: ");
-            for (Task parents : task.getOutEdges()) {
-                System.out.println("ID: " + parents.getId());
+            for(Task k : x.outEdges){
+                System.out.println("ID: " + k.id);
             }
-            System.out.println("Earliest start:  " + task.getEarliestStart());
-            System.out.println("Latest   start:  " + task.getLatestStart());
-            System.out.println("Slack :          " + (task.getLatestStart() - task.getEarliestStart()));
+            System.out.println("Earliest start:  " + x.earliestStart);
+            System.out.println("Latest   start:  " + x.latestStart);
+            System.out.println("Slack :          " + (x.latestStart-x.earliestStart));
             System.out.println();
         }
     }
 
-    private void printCycle(ArrayList<Task> task) {
-        int lastId = task.get(task.size() - 1).getId();
+    private void printCycle(ArrayList<Task> x){
+        int lastId = x.get(x.size()-1).id;
         boolean from = false;
         System.out.println("There is a cycle, and here it is:");
-        for (Task i : task) {
-            if (from) {
-                System.out.println(i.getId());
-            } else if (i.getId() == lastId) {
-                System.out.println(i.getId());
+        for(Task i : x){
+            if(from){
+                System.out.println(i.id);
+            }else if(i.id == lastId){
+                System.out.println(i.id);
                 from = true;
             }
         }
     }
 
-    private boolean cycle(ArrayList<Task> seen, Task k) {
-        if (seen.contains(k)) {
+    private boolean cycle(ArrayList<Task> seen, Task k){
+        if(seen.contains(k)){
             return true;
         }
         ArrayList<Task> send = new ArrayList<>();
         send.addAll(seen);
         send.add(k);
-        for (Task x : k.getOutEdges()) {
-            if (cycle(send, x)) {
-                if (!foundCycle) {
+        for(Task x : k.outEdges){
+            if(cycle(send, x)){
+                if(!foundCycle){
                     foundCycle = true;
                     send.add(x);
                     printCycle(send);
@@ -185,50 +177,99 @@ class Planner {
         return false;
     }
 
-    private boolean findCycle() {
+    boolean findCycle(){
         ArrayList<Task> kk = new ArrayList<>();
-        for (Task k : firstStart) {
-            if (cycle(kk, k)) {
+        for(Task k: firstStart){
+            if(cycle(kk, k)){
                 return true;
             }
         }
         return false;
     }
 
-    /*
-     * private Task getTask(int id) { if (tasks[id - 1] == null) { Task temp = new
-     * Task(id); tasks[id - 1] = temp; return temp; } return tasks[id - 1]; }
-     */
+    private Task getTask(int id){
+        if(tasks[id-1] == null){
+            Task temp = new Task(id);
+            tasks[id-1] = temp;
+            return temp;
+        }
+        return tasks[id-1];
+    }
 
-    private boolean existsUndoneTask() {
-        for (Task t : tasks) {
-            if (t != null) {
+    private boolean existsUndoneTask(){
+        for(Task t : tasks){
+            if(t != null){
                 return true;
             }
         }
-        for (Task k : doing) {
-            if (k != null) {
+        for(Task k : doing){
+            if(k != null){
                 return true;
             }
         }
         return false;
     }
 
-    private void removeTask(int taskId) {
-        for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i) != null) {
-                if (tasks.get(i).getId() == taskId) {
-                    tasks.remove(i);
+    private void removeTask(int x){
+        for(int i = 0; i<tasks.length;i++){
+            if(tasks[i] != null){
+                if(tasks[i].id == x){
+                    tasks[i] = null;
                 }
             }
         }
     }
-    private Task getTask(int id){
-        if(!tasks.contains(new Task(id))){
-            Task temp = new Task(id);
-            tasks.add(id, temp);
-            return temp;
+
+
+
+    private class Task {
+        int         id, time, staff;
+        int         earliestStart , latestStart = -1;
+        int         cntPredecessors;
+        String      name;
+        List<Task>  outEdges = new ArrayList<>();
+        boolean     initialized = false;
+
+        Task(int id) {
+            this.id = id;
         }
-        return tasks.get(id);
+
+        void removePredOnOutEdges(){
+            for(Task x: outEdges){
+                x.cntPredecessors--;
+            }
+        }
+
+        int getLatest(int totalTime){ //går inn i barnene og spør om latestStart, hvis den ikke har barn, setter man det til timeCount-time
+            int latest = -1;
+            int temp;
+            if(latestStart != -1){
+                return latestStart;
+            }
+            if(outEdges.isEmpty()){
+                latestStart = (totalTime - time);
+                return latestStart;
+            }else{
+                for(Task tmp : outEdges){
+                    if(latest == -1){
+                        latest = tmp.getLatest(totalTime);
+                    }else{
+                        temp = tmp.getLatest(totalTime);
+                        if(temp < latest){
+                            latest = temp;
+                        }
+                    }
+                }
+            }
+            latestStart = (latest - time);
+            return latestStart;
+        }
+
+        void initialize(int time, int staff, String name){
+            this.time   = time;
+            this.staff  = staff;
+            this.name   = name;
+            initialized = true;
+        }
     }
 }
